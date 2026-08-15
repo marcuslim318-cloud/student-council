@@ -85,9 +85,10 @@ function personSummary() {
 
 // 科目占比（带百分比），用于色块条
 const catShare = computed(() => {
-  const total = summary.byCat.reduce((s, [, v]) => s + v, 0)
+  const byCat = categorySummary()
+  const total = byCat.reduce((s, [, v]) => s + v, 0)
   if (!total) return []
-  return summary.byCat.map(([k, v]) => ({ name: k, amount: v, pct: Math.round((v / total) * 100) }))
+  return byCat.map(([k, v]) => ({ name: k, amount: v, pct: Math.round((v / total) * 100) }))
 })
 
 async function load() {
