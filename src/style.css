@@ -215,3 +215,19 @@ table.data tr:hover td { background: #fafcff; }
 .tabs button.active { color: var(--primary); border-bottom-color: var(--primary); }
 a { color: var(--primary); }
 .grow { flex: 1; }
+
+/* ========== 移动端适配 ========== */
+@media (max-width: 640px) {
+  .navbar-inner { gap: 8px; padding: 0 10px; flex-wrap: wrap; height: auto; min-height: 56px; padding-top: 8px; padding-bottom: 8px; }
+  .brand small { display: none; }
+  .nav-user-name { display: none; }
+  .nav-user .status-chip { display: none; }
+  .nav-links { order: 3; flex-basis: 100%; }
+  .nav-links a { padding: 7px 9px; font-size: 13px; }
+  .container { padding: 14px 10px 50px; }
+  .page-title { font-size: 18px; }
+  .kpi .v { font-size: 17px; }
+  .list-item { padding: 12px; }
+  .card { padding: 14px; }
+  table.data th, table.data td { padding: 8px 8px; font-size: 12px; }
+}

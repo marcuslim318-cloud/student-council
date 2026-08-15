@@ -9,31 +9,10 @@ const exportExcel = async () => {
   const { default: XLSX } = await import('xlsx')
   const rows = exportRows()
   const ws = XLSX.utils.json_to_sheet(rows)
-  ws['!cols'] = [{ wch: 6 }, { wch: 10 }, { wch: 12 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 8 }, { wch: 12 }]
+  ws['!cols'] = [{ wch: 6 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 8 }, { wch: 12 }]
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, '报销账本')
   XLSX.writeFile(wb, `报销账本_${new Date().toISOString().slice(0, 10)}.xlsx`)
-}
-
-const exportPDF = async () => {
-  const { default: jsPDF } = await import('jspdf')
-  const { default: autoTable } = await import('jspdf-autotable')
-  const doc = new jsPDF()
-  doc.setFontSize(16)
-  doc.text('学生会报销账本', 14, 18)
-  doc.setFontSize(10)
-  doc.text(`导出时间：${new Date().toLocaleString()}`, 14, 25)
-  const rows = exportRows().map((r) => Object.values(r))
-  autoTable(doc, {
-    startY: 30,
-    head: [['序号', '提交人', '学号', '事由', '科目', '金额', '发票号', '状态', '提交时间']],
-    body: rows,
-    styles: { fontSize: 8 },
-  })
-  const finalY = doc.lastAutoTable.finalY + 6
-  doc.setFontSize(10)
-  doc.text(`已打款合计：${money(summary.value.paidAmount)}`, 14, finalY)
-  doc.save(`报销账本_${new Date().toISOString().slice(0, 10)}.pdf`)
 }
 
 const claims = ref([])
@@ -90,7 +69,7 @@ async function load() {
   loading.value = true
   const [cRes, pRes] = await Promise.all([
     supabase.from('claims').select('*').order('created_at', { ascending: false }),
-    supabase.from('profiles').select('id, name, student_id'),
+    supabase.from('profiles').select('id, name, student_id, position'),
   ])
   claims.value = cRes.data || []
   const map = {}
@@ -109,6 +88,7 @@ function exportRows() {
   return claims.value.map((c, i) => ({
     序号: i + 1,
     提交人: profilesMap.value[c.submitter_id]?.name || '—',
+    职位: profilesMap.value[c.submitter_id]?.position || '—',
     学号: profilesMap.value[c.submitter_id]?.student_id || '—',
     事由: c.title,
     科目: c.category,
@@ -130,8 +110,7 @@ onMounted(load)
         <div class="page-sub">全员可见 · 实时更新 · 已打款记录计入支出</div>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn" @click="exportExcel">⬇ Excel</button>
-        <button class="btn" @click="exportPDF">⬇ PDF</button>
+        <button class="btn" @click="exportExcel">⬇ 导出 Excel</button>
       </div>
     </div>
 
@@ -178,7 +157,7 @@ onMounted(load)
             <div class="title">{{ c.title }}</div>
             <div class="meta">
               <span>{{ statusName(c.status) }}</span>
-              <span>{{ profilesMap[c.submitter_id]?.name || '—' }}</span>
+              <span>{{ profilesMap[c.submitter_id]?.name || '—' }}<template v-if="profilesMap[c.submitter_id]?.position">（{{ profilesMap[c.submitter_id].position }}）</template></span>
               <span>{{ c.category }}</span>
               <span>{{ fmtDateShort(c.created_at) }}</span>
             </div>

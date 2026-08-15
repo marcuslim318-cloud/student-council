@@ -79,26 +79,29 @@ onMounted(load)
       <div class="card mb16">
         <div class="card-title">待审核注册（{{ pendingMembers.length }}）</div>
         <div v-if="!pendingMembers.length" class="empty" style="padding:16px">暂无待审核成员</div>
-        <table v-else class="data">
-          <tr><th>学号</th><th>姓名</th><th>邮箱</th><th>注册时间</th><th>操作</th></tr>
-          <tr v-for="p in pendingMembers" :key="p.id">
-            <td>{{ p.student_id }}</td><td>{{ p.name }}</td><td>{{ p.email }}</td><td>{{ fmtDate(p.created_at) }}</td>
-            <td>
-              <button class="btn sm success" @click="updateMember(p, { status: 'active' })">通过</button>
-              <button class="btn sm danger" @click="updateMember(p, { status: 'banned' })">拒绝</button>
-            </td>
-          </tr>
-        </table>
+        <div v-else class="table-wrap">
+          <table class="data">
+            <tr><th>学号</th><th>姓名</th><th>职位</th><th>邮箱</th><th>注册时间</th><th>操作</th></tr>
+            <tr v-for="p in pendingMembers" :key="p.id">
+              <td>{{ p.student_id }}</td><td>{{ p.name }}</td><td>{{ p.position }}</td><td>{{ p.email }}</td><td>{{ fmtDate(p.created_at) }}</td>
+              <td>
+                <button class="btn sm success" @click="updateMember(p, { status: 'active' })">通过</button>
+                <button class="btn sm danger" @click="updateMember(p, { status: 'banned' })">拒绝</button>
+              </td>
+            </tr>
+          </table>
+        </div>
       </div>
 
       <div class="card">
         <div class="card-title">全部成员</div>
         <div class="table-wrap">
           <table class="data">
-            <tr><th>学号</th><th>姓名</th><th>角色</th><th>状态</th><th>操作</th></tr>
+            <tr><th>学号</th><th>姓名</th><th>职位</th><th>角色</th><th>状态</th><th>操作</th></tr>
             <tr v-for="p in [...activeMembers, ...bannedMembers]" :key="p.id">
               <td>{{ p.student_id }}</td>
               <td>{{ p.name }}</td>
+              <td>{{ p.position }}</td>
               <td><span class="role-chip" :class="p.role">{{ roleName(p.role) }}</span></td>
               <td><span class="status-chip" :class="p.status">{{ memberStatusName(p.status) }}</span></td>
               <td style="white-space:nowrap">

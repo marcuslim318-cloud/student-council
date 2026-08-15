@@ -1,12 +1,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { authState, updatePassword, updateMyName, logout } from '../lib/auth'
+import { authState, updatePassword, updateMyProfile, logout } from '../lib/auth'
 
 const route = useRoute()
 const forceChange = route.query.force === '1'
 
 const name = ref('')
+const position = ref('')
 const newPass = ref('')
 const confirmPass = ref('')
 const error = ref('')
@@ -15,18 +16,19 @@ const busy = ref(false)
 
 onMounted(() => {
   name.value = authState.profile?.name || ''
+  position.value = authState.profile?.position || ''
 })
 
-async function saveName() {
+async function saveProfile() {
   error.value = ''
   success.value = ''
-  if (!name.value.trim()) {
-    error.value = '姓名不能为空'
+  if (!name.value.trim() || !position.value.trim()) {
+    error.value = '姓名和职位不能为空'
     return
   }
   try {
-    await updateMyName(name.value.trim())
-    success.value = '姓名已更新'
+    await updateMyProfile(name.value.trim(), position.value.trim())
+    success.value = '资料已更新'
   } catch (e) {
     error.value = e.message
   }
@@ -77,8 +79,12 @@ async function doLogout() {
     <div class="card mb16">
       <div class="card-title">个人资料</div>
       <div class="field">
-        <label>姓名</label>
+        <label>姓名 *</label>
         <input v-model="name" />
+      </div>
+      <div class="field">
+        <label>职位 *</label>
+        <input v-model="position" placeholder="如：组织部部长 / 外联部干事" />
       </div>
       <div class="field">
         <label>学号</label>
@@ -88,7 +94,7 @@ async function doLogout() {
         <label>邮箱</label>
         <input :value="authState.user?.email" disabled />
       </div>
-      <button class="btn" @click="saveName">保存姓名</button>
+      <button class="btn" @click="saveProfile">保存资料</button>
     </div>
 
     <div class="card mb16">

@@ -15,6 +15,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   student_id text not null unique,
   name text not null default '',
+  position text not null default '',
   email text not null default '',
   role text not null default 'member' check (role in ('member','finance','admin')),
   status text not null default 'pending' check (status in ('pending','active','banned')),
@@ -69,11 +70,12 @@ create index if not exists idx_login_attempts_identifier on public.login_attempt
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, student_id, name, email)
+  insert into public.profiles (id, student_id, name, position, email)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'student_id', split_part(new.email, '@', 1)),
     coalesce(new.raw_user_meta_data->>'name', ''),
+    coalesce(new.raw_user_meta_data->>'position', ''),
     new.email
   );
   return new;
@@ -168,12 +170,12 @@ drop policy if exists "profiles_update_admin" on public.profiles;
 create policy "profiles_update_admin" on public.profiles
   for update using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
 
--- 本人修改自己的姓名（安全函数，只允许改 name 字段）
-create or replace function public.update_my_name(p_name text)
+-- 本人修改自己的姓名/职位（安全函数，只允许改 name/position 字段）
+create or replace function public.update_my_profile(p_name text, p_position text)
 returns void language plpgsql security definer set search_path = public as $$
 begin
   if auth.uid() is null then raise exception '未登录'; end if;
-  update public.profiles set name = p_name where id = auth.uid();
+  update public.profiles set name = p_name, position = p_position where id = auth.uid();
 end;
 $$;
 
@@ -199,11 +201,18 @@ create policy "claims_insert" on public.claims
     and exists (select 1 from public.profiles p where p.id = auth.uid() and p.status = 'active')
   );
 
--- claims：提交人在 submitted 状态下可修改/撤销（不能改状态）
+-- claims：提交人在 submitted/rejected 状态下可修改内容；
+-- 只能保持 submitted，或被驳回后改回 submitted（重新提交），不能改成 approved/paid/rejected
 drop policy if exists "claims_update_own" on public.claims;
 create policy "claims_update_own" on public.claims
-  for update using (auth.uid() = submitter_id and status = 'submitted')
-  with check (auth.uid() = submitter_id and status = 'submitted');
+  for update using (
+    auth.uid() = submitter_id
+    and status in ('submitted','rejected')
+  )
+  with check (
+    auth.uid() = submitter_id
+    and status = 'submitted'
+  );
 
 -- claims：财政/管理员审批（通过/驳回），不能批自己的单
 drop policy if exists "claims_update_approve" on public.claims;

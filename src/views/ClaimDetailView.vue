@@ -17,7 +17,9 @@ const showReject = ref(false)
 const busy = ref(false)
 
 const canEdit = computed(
-  () => claim.value?.submitter_id === authState.user.id && claim.value?.status === 'submitted'
+  () =>
+    claim.value?.submitter_id === authState.user.id &&
+    ['submitted', 'rejected'].includes(claim.value?.status)
 )
 const canApprove = computed(
   () =>
@@ -50,7 +52,7 @@ async function load() {
   }
   const { data: sub } = await supabase
     .from('profiles')
-    .select('name, student_id')
+    .select('name, student_id, position')
     .eq('id', data.submitter_id)
     .maybeSingle()
   submitter.value = sub
@@ -105,7 +107,7 @@ onMounted(load)
         <div>
           <div class="page-title">{{ claim.title }}</div>
           <div class="page-sub">
-            提交人：{{ submitter?.name || '—' }}（{{ submitter?.student_id || '—' }}）· {{ fmtDate(claim.created_at) }}
+            提交人：{{ submitter?.name || '—' }}（{{ submitter?.student_id || '—' }}）<template v-if="submitter?.position"> · {{ submitter.position }}</template> · {{ fmtDate(claim.created_at) }}
           </div>
         </div>
         <span class="badge" :class="claim.status">{{ statusName(claim.status) }}</span>
@@ -173,7 +175,10 @@ onMounted(load)
         </div>
 
         <div v-if="canEdit" class="mt8">
-          <RouterLink :to="`/claims/${claim.id}/edit`" class="btn sm">修改报销单</RouterLink>
+          <RouterLink :to="`/claims/${claim.id}/edit`" class="btn sm">
+            {{ claim.status === 'rejected' ? '✏️ 修改并重新提交' : '修改报销单' }}
+          </RouterLink>
+          <div v-if="claim.status === 'rejected'" class="hint mt8">该单据已被驳回，修改后可重新提交，重新进入审核。</div>
         </div>
 
         <div v-if="canDelete" class="mt8">

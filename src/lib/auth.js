@@ -80,12 +80,12 @@ export async function loginWithStudentId(studentId, password) {
 }
 
 // 注册（学号唯一性由数据库保证；邮箱验证关闭时自动确认）
-export async function registerWithStudentId({ studentId, name, email, password }) {
+export async function registerWithStudentId({ studentId, name, position, email, password }) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { student_id: studentId, name },
+      data: { student_id: studentId, name, position },
     },
   })
   if (error) throw new Error(error.message)
@@ -108,9 +108,9 @@ export async function updatePassword(newPassword) {
   await loadProfile()
 }
 
-// 更新姓名（安全函数，只改 name 字段，防自提权）
-export async function updateMyName(name) {
-  const { error } = await supabase.rpc('update_my_name', { p_name: name })
+// 更新姓名/职位（安全函数，只改 name/position 字段，防自提权）
+export async function updateMyProfile(name, position) {
+  const { error } = await supabase.rpc('update_my_profile', { p_name: name, p_position: position })
   if (error) throw new Error(error.message)
   await loadProfile()
 }

@@ -7,6 +7,7 @@ import { money, fmtDate, statusName } from '../lib/utils'
 const tab = ref('submitted')
 const claims = ref([])
 const profilesMap = ref({})
+const receiptUrls = ref({})
 const loading = ref(true)
 const rejectReason = ref('')
 const showRejectFor = ref(null)
@@ -18,13 +19,28 @@ async function load() {
   loading.value = true
   const [cRes, pRes] = await Promise.all([
     supabase.from('claims').select('*').order('created_at', { ascending: true }),
-    supabase.from('profiles').select('id, name, student_id'),
+    supabase.from('profiles').select('id, name, student_id, position'),
   ])
   claims.value = cRes.data || []
   const map = {}
   ;(pRes.data || []).forEach((p) => (map[p.id] = p))
   profilesMap.value = map
+  // 预取所有有发票的收据 URL
+  const urlMap = {}
+  await Promise.all(
+    claims.value
+      .filter((c) => c.receipt_path)
+      .map(async (c) => {
+        urlMap[c.id] = await getReceiptUrl(c.receipt_path)
+      })
+  )
+  receiptUrls.value = urlMap
   loading.value = false
+}
+
+function subName(c) {
+  const p = profilesMap.value[c.submitter_id]
+  return p ? `${p.name}（${p.position || '未填职位'}）` : '—'
 }
 
 async function act(claim, status) {
@@ -50,12 +66,6 @@ async function act(claim, status) {
   rejectReason.value = ''
   busy.value = false
   await load()
-}
-
-async function viewReceipt(claim) {
-  if (!claim.receipt_path) return
-  const url = await getReceiptUrl(claim.receipt_path)
-  window.open(url, '_blank')
 }
 
 onMounted(load)
@@ -85,13 +95,24 @@ onMounted(load)
           <div>
             <div style="font-weight:600">{{ c.title }}</div>
             <div class="meta muted" style="font-size:12px;margin-top:4px">
-              {{ profilesMap[c.submitter_id]?.name || '—' }}（{{ profilesMap[c.submitter_id]?.student_id || '—' }}）· {{ fmtDate(c.created_at) }}
+              {{ subName(c) }} · {{ fmtDate(c.created_at) }}
             </div>
           </div>
           <div style="text-align:right">
             <div style="font-size:18px;font-weight:700">{{ money(c.amount) }}</div>
             <div class="badge" :class="c.status" style="margin-top:4px">{{ statusName(c.status) }}</div>
           </div>
+        </div>
+        <div v-if="c.receipt_path" class="mt8">
+          <div class="small muted mb16" style="margin-bottom:6px">收据凭证：</div>
+          <a :href="receiptUrls[c.id]" target="_blank" rel="noopener">
+            <img
+              :src="receiptUrls[c.id]"
+              :alt="c.title"
+              loading="lazy"
+              style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);display:block"
+            />
+          </a>
         </div>
         <div class="mt8 muted small">
           <span>{{ c.category }}</span>
@@ -103,7 +124,6 @@ onMounted(load)
         <div v-if="c.paid_at" class="mt8 small muted">已打款：{{ fmtDate(c.paid_at) }}</div>
 
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
-          <button v-if="c.receipt_path" class="btn sm" @click="viewReceipt(c)">🧾 查看发票</button>
           <RouterLink class="btn sm" :to="`/claims/${c.id}`">详情</RouterLink>
           <template v-if="c.status === 'submitted'">
             <button class="btn sm success" :disabled="busy" @click="act(c, 'approved')">✓ 通过</button>

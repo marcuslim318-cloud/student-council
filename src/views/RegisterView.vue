@@ -5,7 +5,7 @@ import { registerWithStudentId } from '../lib/auth'
 
 const router = useRouter()
 
-const form = ref({ studentId: '', name: '', email: '', password: '', password2: '' })
+const form = ref({ studentId: '', name: '', position: '', email: '', password: '', password2: '' })
 const error = ref('')
 const success = ref('')
 const loading = ref(false)
@@ -13,8 +13,8 @@ const loading = ref(false)
 async function submit() {
   error.value = ''
   success.value = ''
-  const { studentId, name, email, password, password2 } = form.value
-  if (!studentId.trim() || !name.trim() || !email.trim() || !password) {
+  const { studentId, name, position, email, password, password2 } = form.value
+  if (!studentId.trim() || !name.trim() || !position.trim() || !email.trim() || !password) {
     error.value = '请填写完整信息'
     return
   }
@@ -31,6 +31,7 @@ async function submit() {
     await registerWithStudentId({
       studentId: studentId.trim(),
       name: name.trim(),
+      position: position.trim(),
       email: email.trim(),
       password,
     })
@@ -57,8 +58,12 @@ async function submit() {
           <input v-model="form.studentId" placeholder="你的学号，作为登录账号" />
         </div>
         <div class="field">
-          <label>姓名</label>
+          <label>姓名 *</label>
           <input v-model="form.name" placeholder="真实姓名" />
+        </div>
+        <div class="field">
+          <label>职位 *</label>
+          <input v-model="form.position" placeholder="如：组织部部长 / 外联部干事" />
         </div>
         <div class="field">
           <label>邮箱（用于找回密码）</label>
