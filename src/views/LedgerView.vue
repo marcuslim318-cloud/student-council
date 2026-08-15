@@ -11,7 +11,8 @@ const exportExcel = async () => {
     return
   }
   try {
-    const { default: XLSX } = await import('xlsx')
+    const mod = await import('xlsx')
+    const XLSX = mod.default ?? mod
     const rows = exportRows()
     const ws = XLSX.utils.json_to_sheet(rows)
     ws['!cols'] = [{ wch: 6 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 8 }, { wch: 12 }]
