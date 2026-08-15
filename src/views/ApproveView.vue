@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../lib/supabase'
-import { authState, getReceiptUrl } from '../lib/auth'
+import { authState, isAdmin, getReceiptUrl } from '../lib/auth'
 import { money, fmtDate, statusName } from '../lib/utils'
 
 const tab = ref('submitted')
@@ -76,7 +76,7 @@ onMounted(load)
     <div class="page-head">
       <div>
         <div class="page-title">审批工作台</div>
-        <div class="page-sub">不能审批自己提交的单据 · 所有操作自动记录审计日志</div>
+        <div class="page-sub">管理员可审核自己的单据 · 财政不能审核自己 · 所有操作自动记录审计日志</div>
       </div>
     </div>
 
@@ -125,11 +125,11 @@ onMounted(load)
 
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
           <RouterLink class="btn sm" :to="`/claims/${c.id}`">详情</RouterLink>
-          <template v-if="c.status === 'submitted'">
+          <template v-if="c.status === 'submitted' && (isAdmin || c.submitter_id !== authState.user.id)">
             <button class="btn sm success" :disabled="busy" @click="act(c, 'approved')">✓ 通过</button>
             <button class="btn sm danger" :disabled="busy" @click="showRejectFor = showRejectFor === c.id ? null : c.id">✗ 驳回</button>
           </template>
-          <button v-if="c.status === 'approved'" class="btn sm success" :disabled="busy" @click="act(c, 'paid')">💰 打款</button>
+          <button v-if="c.status === 'approved' && (isAdmin || c.submitter_id !== authState.user.id)" class="btn sm success" :disabled="busy" @click="act(c, 'paid')">💰 打款</button>
         </div>
 
         <div v-if="showRejectFor === c.id" class="mt8" style="display:flex;gap:6px">

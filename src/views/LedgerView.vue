@@ -4,15 +4,32 @@ import { supabase } from '../lib/supabase'
 import { getReceiptUrl } from '../lib/auth'
 import { money, fmtDateShort, statusName } from '../lib/utils'
 
-// 导出库体积大，按需动态加载
+// 导出 Excel：动态加载库 + 手动 Blob 下载（兼容性更好）
 const exportExcel = async () => {
-  const { default: XLSX } = await import('xlsx')
-  const rows = exportRows()
-  const ws = XLSX.utils.json_to_sheet(rows)
-  ws['!cols'] = [{ wch: 6 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 8 }, { wch: 12 }]
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, '报销账本')
-  XLSX.writeFile(wb, `报销账本_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  if (!claims.value.length) {
+    alert('当前没有可导出的报销记录')
+    return
+  }
+  try {
+    const { default: XLSX } = await import('xlsx')
+    const rows = exportRows()
+    const ws = XLSX.utils.json_to_sheet(rows)
+    ws['!cols'] = [{ wch: 6 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 8 }, { wch: 12 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '报销账本')
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `报销账本_${new Date().toISOString().slice(0, 10)}.xlsx`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    alert('导出失败：' + (e?.message || e))
+  }
 }
 
 const claims = ref([])

@@ -214,32 +214,48 @@ create policy "claims_update_own" on public.claims
     and status = 'submitted'
   );
 
--- claims：财政/管理员审批（通过/驳回），不能批自己的单
+-- claims：财政/管理员审批（通过/驳回）；管理员可批自己的单，财政不可批自己
 drop policy if exists "claims_update_approve" on public.claims;
 create policy "claims_update_approve" on public.claims
   for update using (
-    auth.uid() <> submitter_id
-    and status = 'submitted'
-    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('finance','admin'))
+    status = 'submitted'
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid()
+        and p.role in ('finance','admin')
+        and (p.role = 'admin' or p.id <> submitter_id)
+    )
   )
   with check (
-    auth.uid() <> submitter_id
-    and status in ('approved','rejected')
-    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('finance','admin'))
+    status in ('approved','rejected')
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid()
+        and p.role in ('finance','admin')
+        and (p.role = 'admin' or p.id <> submitter_id)
+    )
   );
 
--- claims：财政/管理员打款（approved → paid），不能打自己的
+-- claims：财政/管理员打款（approved → paid）；管理员可打自己的单，财政不可打自己
 drop policy if exists "claims_update_pay" on public.claims;
 create policy "claims_update_pay" on public.claims
   for update using (
-    auth.uid() <> submitter_id
-    and status = 'approved'
-    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('finance','admin'))
+    status = 'approved'
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid()
+        and p.role in ('finance','admin')
+        and (p.role = 'admin' or p.id <> submitter_id)
+    )
   )
   with check (
-    auth.uid() <> submitter_id
-    and status = 'paid'
-    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('finance','admin'))
+    status = 'paid'
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid()
+        and p.role in ('finance','admin')
+        and (p.role = 'admin' or p.id <> submitter_id)
+    )
   );
 
 -- claims：管理员可删除任何单

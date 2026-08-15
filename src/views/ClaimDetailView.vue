@@ -25,13 +25,13 @@ const canApprove = computed(
   () =>
     isApprover.value &&
     claim.value?.status === 'submitted' &&
-    claim.value?.submitter_id !== authState.user.id
+    (isAdmin.value || claim.value?.submitter_id !== authState.user.id)
 )
 const canPay = computed(
   () =>
     isApprover.value &&
     claim.value?.status === 'approved' &&
-    claim.value?.submitter_id !== authState.user.id
+    (isAdmin.value || claim.value?.submitter_id !== authState.user.id)
 )
 const canDelete = computed(
   () => isAdmin.value
