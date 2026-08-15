@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../lib/supabase'
 import { getReceiptUrl } from '../lib/auth'
-import { money, fmtDateShort, statusName } from '../lib/utils'
+import { money, fmtDateShort, statusName, categoryColor } from '../lib/utils'
 
 // 导出 Excel：动态加载库 + 手动 Blob 下载（兼容性更好）
 const exportExcel = async () => {
@@ -83,6 +83,13 @@ function personSummary() {
   return Object.entries(m).sort((a, b) => b[1] - a[1])
 }
 
+// 科目占比（带百分比），用于色块条
+const catShare = computed(() => {
+  const total = summary.byCat.reduce((s, [, v]) => s + v, 0)
+  if (!total) return []
+  return summary.byCat.map(([k, v]) => ({ name: k, amount: v, pct: Math.round((v / total) * 100) }))
+})
+
 async function load() {
   loading.value = true
   const [cRes, pRes] = await Promise.all([
@@ -144,11 +151,25 @@ onMounted(load)
       <div class="grid grid-2 mb16">
         <div class="card">
           <div class="card-title">按科目支出 <span class="sub">（已通过+已打款）</span></div>
-          <table class="data">
-            <tr><th>科目</th><th>金额</th></tr>
-            <tr v-for="[k, v] in summary.byCat" :key="k"><td>{{ k }}</td><td>{{ money(v) }}</td></tr>
-            <tr v-if="!summary.byCat.length"><td colspan="2" class="muted">暂无数据</td></tr>
-          </table>
+          <div v-if="!catShare.length" class="muted" style="padding:8px 0">暂无数据</div>
+          <template v-else>
+            <div class="cat-bar" style="display:flex;height:18px;border-radius:6px;overflow:hidden;margin-bottom:12px">
+              <div
+                v-for="s in catShare"
+                :key="s.name"
+                :style="{ width: s.pct + '%', background: categoryColor(s.name) }"
+                :title="`${s.name} ${s.pct}%`"
+              ></div>
+            </div>
+            <div class="cat-legend" style="display:flex;flex-direction:column;gap:6px">
+              <div v-for="s in catShare" :key="s.name" style="display:flex;align-items:center;gap:8px;font-size:13px">
+                <span :style="{ width: '10px', height: '10px', borderRadius: '3px', background: categoryColor(s.name), flexShrink: 0 }"></span>
+                <span style="flex:1">{{ s.name }}</span>
+                <span style="color:var(--text-2)">{{ money(s.amount) }}</span>
+                <span style="width:44px;text-align:right;color:var(--text-2)">{{ s.pct }}%</span>
+              </div>
+            </div>
+          </template>
         </div>
         <div class="card">
           <div class="card-title">按成员支出</div>

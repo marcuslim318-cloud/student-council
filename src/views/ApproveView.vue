@@ -12,8 +12,41 @@ const loading = ref(true)
 const rejectReason = ref('')
 const showRejectFor = ref(null)
 const busy = ref(false)
+const selected = ref(new Set())
 
 const filtered = computed(() => claims.value.filter((c) => c.status === tab.value))
+
+// 当前用户可审批的单（管理员可批自己，财政不能批自己）
+const approvable = computed(() =>
+  filtered.value.filter((c) => c.status === 'submitted' && (isAdmin.value || c.submitter_id !== authState.user.id))
+)
+const allSelected = computed(() =>
+  approvable.value.length > 0 && approvable.value.every((c) => selected.value.has(c.id))
+)
+const batchTotal = computed(() => approvable.value.reduce((s, c) => s + Number(c.amount), 0))
+
+function toggleAll() {
+  if (allSelected.value) {
+    selected.value = new Set()
+  } else {
+    selected.value = new Set(approvable.value.map((c) => c.id))
+  }
+}
+
+async function batchApprove() {
+  if (!selected.value.size) return
+  if (!confirm(`批量通过 ${selected.value.size} 张报销单（共 ${money(batchTotal.value)}）？`)) return
+  busy.value = true
+  const ids = [...selected.value]
+  const { error } = await supabase
+    .from('claims')
+    .update({ status: 'approved', approved_by: authState.user.id, approved_at: new Date().toISOString(), reject_reason: '' })
+    .in('id', ids)
+  if (error) alert('批量操作失败：' + error.message)
+  selected.value = new Set()
+  busy.value = false
+  await load()
+}
 
 async function load() {
   loading.value = true
@@ -89,31 +122,50 @@ onMounted(load)
 
     <div v-if="loading" class="loading">加载中…</div>
     <div v-else-if="!filtered.length" class="empty">该列表暂无单据</div>
-    <div v-else class="grid">
-      <div v-for="c in filtered" :key="c.id" class="card">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-          <div>
-            <div style="font-weight:600">{{ c.title }}</div>
-            <div class="meta muted" style="font-size:12px;margin-top:4px">
-              {{ subName(c) }} · {{ fmtDate(c.created_at) }}
+    <template v-else>
+      <div v-if="tab === 'submitted' && approvable.length" class="card mb16" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="checkbox" :checked="allSelected" @change="toggleAll" />
+          全选本页
+        </label>
+        <span class="muted small">已选 {{ selected.size }} 张 · 共 {{ money(batchTotal) }}</span>
+        <button class="btn sm success" :disabled="busy || !selected.size" @click="batchApprove">✓ 批量通过</button>
+      </div>
+      <div class="grid">
+        <div v-for="c in filtered" :key="c.id" class="card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+            <div style="display:flex;gap:8px;align-items:flex-start">
+              <input
+                v-if="c.status === 'submitted' && (isAdmin || c.submitter_id !== authState.user.id)"
+                type="checkbox"
+                :checked="selected.has(c.id)"
+                @change="selected.has(c.id) ? selected.delete(c.id) : selected.add(c.id)"
+                style="margin-top:3px"
+              />
+              <div>
+                <div style="font-weight:600">{{ c.title }}</div>
+                <div class="meta muted" style="font-size:12px;margin-top:4px">
+                  {{ subName(c) }} · {{ fmtDate(c.created_at) }}
+                </div>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:18px;font-weight:700">{{ money(c.amount) }}</div>
+              <div class="badge" :class="c.status" style="margin-top:4px">{{ statusName(c.status) }}</div>
             </div>
           </div>
-          <div style="text-align:right">
-            <div style="font-size:18px;font-weight:700">{{ money(c.amount) }}</div>
-            <div class="badge" :class="c.status" style="margin-top:4px">{{ statusName(c.status) }}</div>
+          <div class="mt8">
+            <div class="small muted" style="margin-bottom:6px">收据凭证：</div>
+            <a v-if="c.receipt_path" :href="receiptUrls[c.id]" target="_blank" rel="noopener">
+              <img
+                :src="receiptUrls[c.id]"
+                :alt="c.title"
+                loading="lazy"
+                style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);display:block"
+              />
+            </a>
+            <div v-else class="small muted" style="padding:10px;border:1px dashed var(--border);border-radius:8px;text-align:center">没有照片</div>
           </div>
-        </div>
-        <div v-if="c.receipt_path" class="mt8">
-          <div class="small muted mb16" style="margin-bottom:6px">收据凭证：</div>
-          <a :href="receiptUrls[c.id]" target="_blank" rel="noopener">
-            <img
-              :src="receiptUrls[c.id]"
-              :alt="c.title"
-              loading="lazy"
-              style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);display:block"
-            />
-          </a>
-        </div>
         <div class="mt8 muted small">
           <span>{{ c.category }}</span>
           <span v-if="c.invoice_no"> · 发票号：{{ c.invoice_no }}</span>
@@ -138,5 +190,6 @@ onMounted(load)
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>

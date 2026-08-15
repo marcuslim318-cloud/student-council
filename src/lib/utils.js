@@ -20,6 +20,22 @@ export function fmtDateShort(iso) {
 
 export const CATEGORIES = ['物料购置', '活动场地', '交通出行', '印刷宣传', '奖品礼品', '办公用品', '餐费', '其他']
 
+// 科目配色（用于色块图）
+export const CATEGORY_COLORS = {
+  '物料购置': '#2f6fed',
+  '活动场地': '#12b76a',
+  '交通出行': '#f79009',
+  '印刷宣传': '#7c3aed',
+  '奖品礼品': '#db2777',
+  '办公用品': '#0e9384',
+  '餐费': '#ea580c',
+  '其他': '#94a3b8',
+}
+
+export function categoryColor(cat) {
+  return CATEGORY_COLORS[cat] || '#94a3b8'
+}
+
 export const STATUS_META = {
   submitted: { label: '待审核', cls: 'submitted', icon: '⏳' },
   approved: { label: '已通过', cls: 'approved', icon: '✓' },
