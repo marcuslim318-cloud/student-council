@@ -157,7 +157,7 @@ async function submit() {
       </div>
 
       <div v-if="error" class="alert error">{{ error }}</div>
-      <button class="btn primary block" :disabled="loading || profileStatus !== 'active'" @click="submit">
+      <button class="btn cta block" :disabled="loading || profileStatus !== 'active'" @click="submit">
         <span v-if="loading" class="spinner"></span>
         {{ loading ? '提交中…' : '提交报销单' }}
       </button>

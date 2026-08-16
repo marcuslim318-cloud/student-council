@@ -40,7 +40,7 @@ onMounted(load)
         </div>
         <div class="page-sub" v-else>在这里提交报销单，财务审批后将自动公开到账本</div>
       </div>
-      <RouterLink to="/claims/new" class="btn primary">+ 提交报销</RouterLink>
+      <RouterLink to="/claims/new" class="btn cta">+ 提交报销</RouterLink>
     </div>
 
     <div class="kpi-row mb16">

@@ -47,7 +47,7 @@ async function submit() {
           <input v-model="password" type="password" placeholder="请输入密码" @keyup.enter="submit" />
         </div>
         <div v-if="error" class="alert error">{{ error }}</div>
-        <button class="btn primary block" :disabled="loading" @click="submit">
+        <button class="btn cta block" :disabled="loading" @click="submit">
           <span v-if="loading" class="spinner"></span>
           {{ loading ? '登录中…' : '登 录' }}
         </button>

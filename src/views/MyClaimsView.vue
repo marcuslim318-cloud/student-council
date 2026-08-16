@@ -28,7 +28,7 @@ onMounted(load)
         <div class="page-title">我的报销记录</div>
         <div class="page-sub">共 {{ claims.length }} 条 · 点击查看详情与审批进度</div>
       </div>
-      <RouterLink to="/claims/new" class="btn primary">+ 提交报销</RouterLink>
+      <RouterLink to="/claims/new" class="btn cta">+ 提交报销</RouterLink>
     </div>
 
     <div v-if="loading" class="loading">加载中…</div>

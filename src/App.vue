@@ -8,7 +8,7 @@ import { authState, isLoggedIn } from './lib/auth'
   <div v-else class="app-shell">
     <nav class="navbar">
       <div class="navbar-inner">
-        <span class="brand">学生会 <small>报销记账</small></span>
+        <span class="brand">学生会<span class="accent">报销</span> <small>记账系统</small></span>
         <div class="nav-links">
           <RouterLink to="/">首页</RouterLink>
           <RouterLink to="/my-claims">报销记录</RouterLink>
