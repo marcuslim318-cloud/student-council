@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../lib/supabase'
-import { money, fmtDate, roleName, memberStatusName } from '../lib/utils'
+import { money, fmtDate, roleName, memberStatusName, statusName } from '../lib/utils'
 
 const tab = ref('members')
 const profiles = ref([])
@@ -51,6 +51,62 @@ function formatDetail(d) {
     return JSON.stringify(d)
   } catch {
     return String(d)
+  }
+}
+
+function actionLabel(action) {
+  return {
+    status_change: '状态变更',
+    delete: '删除',
+    member_change: '成员变更',
+  }[action] || action
+}
+
+// 导出审计日志为 Excel
+const exportLogs = async () => {
+  if (!logs.value.length) {
+    alert('当前没有可导出的审计日志')
+    return
+  }
+  try {
+    const ExcelJS = (await import('exceljs')).default
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('审计日志')
+
+    ws.columns = [
+      { header: '时间', key: 'time', width: 20 },
+      { header: '操作人', key: 'actor', width: 16 },
+      { header: '动作', key: 'action', width: 14 },
+      { header: '对象', key: 'target', width: 14 },
+      { header: '明细', key: 'detail', width: 60 },
+    ]
+    ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+    ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2F6FED' } }
+    ws.getRow(1).height = 22
+
+    for (const l of logs.value) {
+      ws.addRow({
+        time: fmtDate(l.created_at),
+        actor: profileName(l.actor_id),
+        action: actionLabel(l.action),
+        target: l.target_type,
+        detail: formatDetail(l.detail),
+      })
+    }
+    ws.views = [{ state: 'frozen', ySplit: 1 }]
+
+    const out = await wb.xlsx.writeBuffer()
+    const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `审计日志_${new Date().toISOString().slice(0, 10)}.xlsx`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    alert('导出失败：' + (e?.message || e))
   }
 }
 
@@ -143,6 +199,10 @@ onMounted(load)
     <!-- 审计日志 -->
     <div v-else>
       <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="card-title" style="margin-bottom:0">审计日志（{{ logs.length }} 条）</div>
+          <button class="btn sm" @click="exportLogs">⬇ 导出 Excel</button>
+        </div>
         <div class="table-wrap">
           <table class="data">
             <tr><th>时间</th><th>操作人</th><th>动作</th><th>对象</th><th>明细</th></tr>
