@@ -20,7 +20,7 @@ async function submit() {
   loading.value = true
   try {
     await loginWithStudentId(studentId.value.trim(), password.value)
-    const redirect = route.query.redirect || '/'
+    const redirect = route.query.redirect || '/home'
     router.push(redirect)
   } catch (e) {
     error.value = e.message

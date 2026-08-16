@@ -22,7 +22,7 @@ async function submit() {
   loading.value = true
   try {
     await updatePassword(p1.value)
-    router.push('/')
+    router.push('/home')
   } catch (e) {
     error.value = e.message
   } finally {

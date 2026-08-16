@@ -90,7 +90,7 @@ async function remove() {
   if (err) {
     error.value = err.message
   } else {
-    router.push('/')
+    router.push('/home')
   }
 }
 

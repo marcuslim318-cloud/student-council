@@ -29,6 +29,12 @@ const routes = [
   },
   {
     path: '/',
+    name: 'landing',
+    component: () => import('../views/LandingView.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/home',
     name: 'home',
     component: () => import('../views/HomeView.vue'),
   },
@@ -89,8 +95,8 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.public) {
-    // 已登录用户访问登录页 → 回首页
-    if (isLoggedIn.value && to.name === 'login') return { name: 'home' }
+    // 已登录用户访问登录页或落地页 → 回首页
+    if (isLoggedIn.value && (to.name === 'login' || to.name === 'landing')) return { name: 'home' }
     return true
   }
 
