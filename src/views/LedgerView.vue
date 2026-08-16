@@ -1,24 +1,69 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../lib/supabase'
-import { getReceiptUrl } from '../lib/auth'
 import { money, fmtDateShort, statusName, categoryColor } from '../lib/utils'
+import { getReceiptUrl } from '../lib/auth'
 
-// 导出 Excel：动态加载库 + 手动 Blob 下载（兼容性更好）
+// 导出 Excel：用 exceljs 生成，支持嵌入发票照片
 const exportExcel = async () => {
   if (!claims.value.length) {
     alert('当前没有可导出的报销记录')
     return
   }
   try {
-    const mod = await import('xlsx')
-    const XLSX = mod.default ?? mod
-    const rows = exportRows()
-    const ws = XLSX.utils.json_to_sheet(rows)
-    ws['!cols'] = [{ wch: 6 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 8 }, { wch: 12 }]
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, '报销账本')
-    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    const ExcelJS = (await import('exceljs')).default
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('报销账本')
+
+    ws.columns = [
+      { header: '提交日期', key: 'date', width: 14 },
+      { header: '提交人', key: 'name', width: 16 },
+      { header: '事由', key: 'title', width: 28 },
+      { header: '科目', key: 'category', width: 14 },
+      { header: '金额(元)', key: 'amount', width: 12 },
+      { header: '发票照片', key: 'receipt', width: 22 },
+      { header: '状态', key: 'status', width: 12 },
+    ]
+    // 表头样式
+    ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+    ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2F6FED' } }
+    ws.getRow(1).height = 22
+
+    let rowNum = 2
+    for (const c of claims.value) {
+      const p = profilesMap.value[c.submitter_id]
+      ws.addRow({
+        date: fmtDateShort(c.created_at),
+        name: p?.name || '—',
+        title: c.title,
+        category: c.category,
+        amount: Number(c.amount),
+        receipt: c.receipt_path ? '见下方图片' : '无照片',
+        status: statusName(c.status),
+      })
+      ws.getCell(`E${rowNum}`).numFmt = '#,##0.00'
+      // 嵌入发票照片
+      if (c.receipt_path && receiptUrls.value[c.id]) {
+        try {
+          const resp = await fetch(receiptUrls.value[c.id])
+          const buf = await resp.arrayBuffer()
+          const ext = c.receipt_path.split('.').pop()?.toLowerCase() === 'png' ? 'png' : 'jpeg'
+          const imgId = wb.addImage({ buffer: buf, extension: ext })
+          ws.addImage(imgId, {
+            tl: { col: 5, row: rowNum - 1 },
+            ext: { width: 110, height: 82 },
+            editAs: 'oneCell',
+          })
+          ws.getRow(rowNum).height = 64
+        } catch {
+          ws.getCell(`F${rowNum}`).value = '有照片(加载失败)'
+        }
+      }
+      rowNum++
+    }
+    ws.views = [{ state: 'frozen', ySplit: 1 }]
+
+    const out = await wb.xlsx.writeBuffer()
     const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -101,28 +146,17 @@ async function load() {
   const map = {}
   ;(pRes.data || []).forEach((p) => (map[p.id] = p))
   profilesMap.value = map
+  // 预取发票照片 URL（用于 Excel 导出）
+  const urlMap = {}
+  await Promise.all(
+    claims.value
+      .filter((c) => c.receipt_path)
+      .map(async (c) => {
+        urlMap[c.id] = await getReceiptUrl(c.receipt_path)
+      })
+  )
+  receiptUrls.value = urlMap
   loading.value = false
-}
-
-async function viewReceipt(claim) {
-  if (!claim.receipt_path) return
-  const url = await getReceiptUrl(claim.receipt_path)
-  window.open(url, '_blank')
-}
-
-function exportRows() {
-  return claims.value.map((c, i) => ({
-    序号: i + 1,
-    提交人: profilesMap.value[c.submitter_id]?.name || '—',
-    职位: profilesMap.value[c.submitter_id]?.position || '—',
-    学号: profilesMap.value[c.submitter_id]?.student_id || '—',
-    事由: c.title,
-    科目: c.category,
-    金额: Number(c.amount),
-    发票号: c.invoice_no || '',
-    状态: statusName(c.status),
-    提交时间: fmtDateShort(c.created_at),
-  }))
 }
 
 onMounted(load)
@@ -204,7 +238,6 @@ onMounted(load)
           </div>
           <div style="text-align:right">
             <div class="amount" :class="c.status">{{ money(c.amount) }}</div>
-            <button v-if="c.receipt_path" class="btn sm mt8" @click.prevent="viewReceipt(c)">🧾 看发票</button>
           </div>
         </RouterLink>
       </div>

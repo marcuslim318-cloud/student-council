@@ -38,6 +38,11 @@ const routes = [
     component: () => import('../views/NewClaimView.vue'),
   },
   {
+    path: '/my-claims',
+    name: 'my-claims',
+    component: () => import('../views/MyClaimsView.vue'),
+  },
+  {
     path: '/claims/:id',
     name: 'claim-detail',
     component: () => import('../views/ClaimDetailView.vue'),

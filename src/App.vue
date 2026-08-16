@@ -11,6 +11,7 @@ import { authState, isLoggedIn } from './lib/auth'
         <span class="brand">学生会 <small>报销记账</small></span>
         <div class="nav-links">
           <RouterLink to="/">首页</RouterLink>
+          <RouterLink to="/my-claims">报销记录</RouterLink>
           <RouterLink to="/claims/new">提交报销</RouterLink>
           <RouterLink to="/ledger">公开账本</RouterLink>
           <RouterLink v-if="authState.profile?.role === 'admin' || authState.profile?.role === 'finance'" to="/approve">审核</RouterLink>
