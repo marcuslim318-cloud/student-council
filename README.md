@@ -2,7 +2,7 @@
 
 给学生会执委报销、财政记账、全员看账本的一体化系统。
 
-- **技术栈**：Vue 3 + Vite + JavaScript + Supabase（免费云）+ Vercel
+- **技术栈**：Vue 3 + Vite + JavaScript + Supabase（免费云）+ Cloudflare Pages（中国大陆可访问）
 - **落地页首页**：未登录访问 `/` 进入 Zenvix 风格介绍落地页（背景视频 + GSAP 动画 + 3D 仪表盘），登录后进入系统首页 `/home`
 - **登录页**：同款 Zenvix 风格（背景视频 + 3D 玻璃卡片 + GSAP 入场动画 + 品牌介绍双栏）
 - **权限三角色**：执委（提交报销）· 财政（审批/打款）· 管理员（一切）
@@ -62,14 +62,25 @@ npm run dev
 
 浏览器打开 http://localhost:5173
 
-### 4. 部署到 Vercel（手机可访问）
+### 4. 部署到 Cloudflare Pages（手机可访问，中国大陆无需翻墙）
 
-1. 把项目推到 GitHub（或用 Vercel CLI）
-2. 在 https://vercel.com 导入仓库，Framework 选 **Vite**
-3. 在项目设置里添加环境变量：
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-4. 部署完成后所有人就能用网址访问了
+> 原使用 Vercel，因 `*.vercel.app` 在中国大陆 DNS 被污染，已迁移至 Cloudflare Pages（`*.pages.dev` 实测国内可正常解析）。
+
+1. 注册 [Cloudflare](https://dash.cloudflare.com/sign-up)（免费），创建 API Token：My Profile → API Tokens → Create Token → **Edit Cloudflare Workers**
+2. 本地安装依赖：`npm install`（含 wrangler）
+3. 构建：`npm run build`
+4. 部署（`$env:CLOUDFLARE_API_TOKEN` 为你的 token）：
+
+```powershell
+$env:CLOUDFLARE_API_TOKEN = "你的token"
+npx.cmd wrangler pages project create student-council --production-branch main
+npx.cmd wrangler pages deploy dist --project-name student-council --branch main
+```
+
+5. 完成后访问 `https://student-council-7ca.pages.dev`
+6. 在 Supabase 后台 **Authentication → URL Configuration** 把 **Site URL** 设为 `https://student-council-7ca.pages.dev`，**Redirect URLs** 加 `https://student-council-7ca.pages.dev/**`（找回密码邮件链接指向）
+
+> `public/_redirects` 提供 SPA 路由回退，`public/_headers` 提供安全响应头，构建时自动进入产物。
 
 ### 5. 首次登录
 
