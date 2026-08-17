@@ -35,7 +35,7 @@ async function submit() {
       email: email.trim(),
       password,
     })
-    success.value = '注册成功！请先到邮箱点击确认链接激活账号，然后等待管理员审核通过即可提交报销。'
+    success.value = '注册成功！等待管理员审核通过后即可登录提交报销。'
     setTimeout(() => router.push('/login'), 3500)
   } catch (e) {
     error.value = e.message
@@ -50,7 +50,7 @@ async function submit() {
     <div class="auth-card">
       <div class="auth-logo">
         <div class="big">注册执委账号</div>
-        <div class="en">注册 → 邮箱确认 → 管理员审核，通过后才能提交报销</div>
+        <div class="en">注册 → 管理员审核，通过后才能提交报销</div>
       </div>
       <div class="card">
         <div class="field">
